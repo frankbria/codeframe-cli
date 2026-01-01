@@ -165,11 +165,21 @@ class QueueProcessor:
                 )
                 if rate_limit_info:
                     seconds = int(rate_limit_info.group(1))
+                    # Calculate new retry time from NOW + rate limit seconds + buffer
+                    from datetime import datetime, timedelta
+                    from .scanner import IssueScanner as Scanner
+
+                    next_retry = datetime.now() + timedelta(
+                        seconds=seconds, minutes=Scanner.RETRY_BUFFER_MINUTES
+                    )
+
                     self.db.log_processing(
                         repo_name, issue_number, success=False, rate_limit_seconds=seconds
                     )
-                    self.db.increment_retry_count(repo_name, issue_number, "Still rate limited")
-                    print(f"  ⚠ Still rate limited ({seconds}s)")
+                    self.db.increment_retry_count(
+                        repo_name, issue_number, "Still rate limited", next_retry_at=next_retry
+                    )
+                    print(f"  ⚠ Still rate limited ({seconds}s), retry at {next_retry.isoformat()}")
                     return "rate_limited"
 
             else:

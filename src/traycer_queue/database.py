@@ -160,24 +160,37 @@ class Database:
             cursor.execute(query, (datetime.now(),))
             return [dict(row) for row in cursor.fetchall()]
 
-    def increment_retry_count(self, repo_name: str, issue_number: int, error: str) -> None:
+    def increment_retry_count(
+        self, repo_name: str, issue_number: int, error: str, next_retry_at: datetime | None = None
+    ) -> None:
         """Increment retry count for an issue and log error.
 
         Args:
             repo_name: Repository full name
             issue_number: Issue number
             error: Error message to log
+            next_retry_at: Optional new retry time (if rate limited again)
         """
         with self._get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute(
-                """
-                UPDATE queued_issues
-                SET retry_count = retry_count + 1, last_error = ?
-                WHERE repo_name = ? AND issue_number = ?
-            """,
-                (error, repo_name, issue_number),
-            )
+            if next_retry_at:
+                cursor.execute(
+                    """
+                    UPDATE queued_issues
+                    SET retry_count = retry_count + 1, last_error = ?, next_retry_at = ?
+                    WHERE repo_name = ? AND issue_number = ?
+                """,
+                    (error, next_retry_at, repo_name, issue_number),
+                )
+            else:
+                cursor.execute(
+                    """
+                    UPDATE queued_issues
+                    SET retry_count = retry_count + 1, last_error = ?
+                    WHERE repo_name = ? AND issue_number = ?
+                """,
+                    (error, repo_name, issue_number),
+                )
 
     def log_processing(
         self,
@@ -267,7 +280,7 @@ class Database:
             cursor.execute(
                 """
                 SELECT * FROM error_log
-                WHERE error_type NOT IN ('rate_limit')
+                WHERE error_type NOT IN ('rate_limit', 'max_retries', 'circuit_breaker')
                 ORDER BY timestamp DESC
                 LIMIT ?
             """,
