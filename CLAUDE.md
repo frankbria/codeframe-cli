@@ -72,6 +72,25 @@ ruff format src/
 ruff check src/ && ruff format src/
 ```
 
+### Dashboard (TUI)
+
+**Quick Status Check**:
+```bash
+./dashboard.sh
+```
+
+**Live Monitoring** (auto-refresh):
+```bash
+./dashboard.sh --live
+./dashboard.sh --live --refresh 10  # Custom refresh rate
+```
+
+The dashboard displays:
+- Queue status (total queued, ready now, slots available)
+- Top repositories by issue count
+- Recent processing activity (last hour)
+- Recent errors
+
 ### Database Inspection
 ```bash
 # Open database
