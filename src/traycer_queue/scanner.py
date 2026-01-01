@@ -23,8 +23,11 @@ class RateLimitInfo(NamedTuple):
 class IssueScanner:
     """Scans GitHub repositories for Traycer AI rate-limited issues."""
 
-    TRAYCER_BOT_LOGIN = "traycerai"
-    RATE_LIMIT_PATTERN = re.compile(r"Rate limit exceeded\. Please try after (\d+) seconds\.")
+    TRAYCER_BOT_LOGIN = "traycerai[bot]"
+    # Updated pattern to handle blockquote format: "> [!WARNING]\n> Rate limit exceeded..."
+    RATE_LIMIT_PATTERN = re.compile(
+        r"Rate limit exceeded\.\s+Please try after (\d+) seconds\.", re.MULTILINE | re.DOTALL
+    )
     RETRY_BUFFER_MINUTES = 2  # Add 2 minutes buffer to 30-minute intervals
 
     def __init__(self, github_token: str, db: Database):
